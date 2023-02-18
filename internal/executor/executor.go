@@ -1,12 +1,14 @@
 package executor
 
 import (
+	"bufio"
 	pb "github.com/OliveTin/OliveTin/gen/grpc"
 	acl "github.com/OliveTin/OliveTin/internal/acl"
 	config "github.com/OliveTin/OliveTin/internal/config"
+	"github.com/OliveTin/OliveTin/internal/httpservers"
 	log "github.com/sirupsen/logrus"
+	"io"
 
-	"bytes"
 	"context"
 	"os/exec"
 	"runtime"
@@ -172,24 +174,40 @@ func wrapCommandInShell(ctx context.Context, finalParsedCommand string) *exec.Cm
 }
 
 func stepExec(req *ExecutionRequest) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.action.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.action.Timeout)*time.Hour)
 	defer cancel()
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
 	cmd := wrapCommandInShell(ctx, req.finalParsedCommand)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 
-	runerr := cmd.Run()
+	var stdout, err = cmd.StdoutPipe()
+	if err != nil {
+		log.Println(err)
+		return false
+	}
 
-	req.logEntry.ExitCode = int32(cmd.ProcessState.ExitCode())
-	req.logEntry.Stdout = stdout.String()
-	req.logEntry.Stderr = stderr.String()
+	var stderr, err2 = cmd.StderrPipe()
+	if err2 != nil {
+		log.Println(err2)
+		return false
+	}
 
-	if runerr != nil {
-		req.logEntry.Stderr = runerr.Error() + "\n\n" + req.logEntry.Stderr
+	if cmderr := cmd.Start(); cmderr != nil {
+		log.Println(cmderr)
+		return false
+	}
+
+	//req.logEntry.ExitCode = int32(cmd.ProcessState.ExitCode())
+	//req.logEntry.Stdout = stdout.String()
+	//req.logEntry.Stderr = stderr.String()
+
+	s := bufio.NewScanner(io.MultiReader(stdout, stderr))
+	for s.Scan() {
+		httpservers.WsChannel <- s.Text()
+	}
+
+	if err := cmd.Wait(); err != nil {
+		log.Println(err)
+		return false
 	}
 
 	if ctx.Err() == context.DeadlineExceeded {

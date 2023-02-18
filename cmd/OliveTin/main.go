@@ -103,6 +103,7 @@ func main() {
 
 	log.Debugf("Config: %+v", cfg)
 
+	httpservers.WsChannel = make(chan string)
 	executor := executor.DefaultExecutor()
 
 	go onstartup.Execute(cfg, executor)
