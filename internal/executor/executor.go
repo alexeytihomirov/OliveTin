@@ -196,10 +196,6 @@ func stepExec(req *ExecutionRequest) bool {
 		return false
 	}
 
-	//req.logEntry.ExitCode = int32(cmd.ProcessState.ExitCode())
-	//req.logEntry.Stdout = stdout.String()
-	//req.logEntry.Stderr = stderr.String()
-
 	s := bufio.NewScanner(io.MultiReader(stdout, stderr))
 	for s.Scan() {
 		httpservers.WsChannel <- s.Text()
@@ -213,6 +209,10 @@ func stepExec(req *ExecutionRequest) bool {
 	if ctx.Err() == context.DeadlineExceeded {
 		req.logEntry.TimedOut = true
 	}
+
+	req.logEntry.ExitCode = 0
+	req.logEntry.Stdout = "Use websocket to get output"
+	req.logEntry.Stderr = "Use websocket to get error output"
 
 	req.logEntry.Tags = req.Tags
 

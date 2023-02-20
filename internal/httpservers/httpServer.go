@@ -13,7 +13,10 @@ func StartServers(cfg *config.Config) {
 		go StartSingleHTTPFrontend(cfg)
 	}
 
-	go startWebsocketServer()
+	go startWebsocketServer(cfg)
 
-	startRestAPIServer(cfg)
+	err := startRestAPIServer(cfg)
+	if err != nil {
+		return
+	}
 }

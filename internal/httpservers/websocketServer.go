@@ -2,7 +2,9 @@ package httpservers
 
 import (
 	"fmt"
+	"github.com/OliveTin/OliveTin/internal/config"
 	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -13,8 +15,13 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func startWebsocketServer() {
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+func startWebsocketServer(cfg *config.Config) {
+
+	log.WithFields(log.Fields{
+		"address": cfg.ListenAddressWebSocket,
+	}).Info("Starting WebSocket server")
+
+	http.HandleFunc("/cli", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -33,9 +40,12 @@ func startWebsocketServer() {
 			}
 		}(ws)
 		for {
-			ws.WriteMessage(1, []byte(<-WsChannel))
+			webSocketWriteErr := ws.WriteMessage(1, []byte(<-WsChannel))
+			if webSocketWriteErr != nil {
+				log.Error(webSocketWriteErr)
+				return
+			}
 		}
 	})
-
-	_ = http.ListenAndServe(":8000", nil)
+	_ = http.ListenAndServe(cfg.ListenAddressWebSocket, nil)
 }

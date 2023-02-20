@@ -61,6 +61,7 @@ type Config struct {
 	ThemeName                       string
 	ListenAddressSingleHTTPFrontend string
 	ListenAddressWebUI              string
+	ListenAddressWebSocket          string
 	ListenAddressRestActions        string
 	ListenAddressGrpcActions        string
 	ExternalRestAddress             string
@@ -94,6 +95,7 @@ func DefaultConfig() *Config {
 	config.ListenAddressRestActions = "localhost:1338"
 	config.ListenAddressGrpcActions = "localhost:1339"
 	config.ListenAddressWebUI = "localhost:1340"
+	config.ListenAddressWebSocket = "localhost:1341"
 	config.ExternalRestAddress = "."
 	config.LogLevel = "INFO"
 	config.CheckForUpdates = true
